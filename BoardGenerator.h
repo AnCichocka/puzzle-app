@@ -17,14 +17,15 @@ private:
 	vector<Position> freePositions_;
 	vector<Puzzle> puzzles_;
 	vector<Puzzle> holes_;
-	bool canPlace_;
 
 public:
 	BoardGenerator();
 	BoardGenerator(int width, int height);
+	void generateBoard();
 	void printBoard();
 	int (*getBoard())[10];
 	vector<Puzzle> getPuzzles();
+	void printAnswer(vector<int> puzzleIDs);
 
 private:
 	void generateFreePositions();

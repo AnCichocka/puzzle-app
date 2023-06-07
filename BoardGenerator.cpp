@@ -32,6 +32,21 @@ BoardGenerator::BoardGenerator(int width, int height)
 			board_[i][j] = -1;
 		}
 	}
+}
+
+void BoardGenerator::generateBoard()
+{
+	puzzles_.clear();
+	holes_.clear();
+	freePositions_.clear();
+
+	for (int i = 0; i < 10; i++)
+	{
+		for (int j = 0; j < 10; j++)
+		{
+			board_[i][j] = -1;
+		}
+	}
 
 	cout << "generating free positions..." << endl;
 	generateFreePositions();
@@ -218,7 +233,7 @@ void BoardGenerator::scaleHolesWithWholePuzzles()
 		int index = getRandomFromInterval(0, neighbourPuzzleIDs.size() - 1);
 		int puzzleID = neighbourPuzzleIDs[index];
 
-		for (Puzzle puzzle : puzzles_)
+		for (Puzzle &puzzle : puzzles_)
 		{
 			if (puzzle.getID() == puzzleID)
 			{
@@ -287,6 +302,10 @@ void BoardGenerator::printBoard()
 		for (int j = 0; j < 10; j++)
 		{
 			cout << board_[i][j] << " ";
+			if (board_[i][j] >= 0 && board_[i][j] < 10)
+			{
+				cout << " ";
+			}
 		}
 		cout << endl;
 	}
@@ -320,9 +339,9 @@ void BoardGenerator::reindexPuzzles()
 				int y = position.getY();
 				board_[y][x] = newID;
 			}
+			puzzle.setID(newID);
 		}
 
-		puzzle.setID(newID);
 		newID++;
 	}
 }
@@ -332,5 +351,22 @@ void BoardGenerator::scalePuzzles()
 	for (int i = 0; i < (int)puzzles_.size(); i++)
 	{
 		puzzles_[i].scalePuzzle();
+	}
+}
+
+void BoardGenerator::printAnswer(vector<int> puzzleIDs)
+{
+	for (int i = 0; i < 10; i++)
+	{
+		for (int j = 0; j < 10; j++)
+		{
+
+			cout << board_[i][j] << " ";
+			if (board_[i][j] < 10)
+			{
+				cout << " ";
+			}
+		}
+		cout << endl;
 	}
 }

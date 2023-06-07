@@ -4,28 +4,17 @@
 #include "Puzzle.h"
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <chrono>
+#include <iostream>
+#include <random>
+#include <unistd.h>
 
 const int asideRowNumber = 5;
 int asideColNumber;
-// change to ID
-int activePuzzleIndex = 0;
-int activePuzzleID;
-int (*board)[10];
-int puzzlesNumber;
 
-void handleArrow(GameBoard &gameBoard, Position position);
-void handleSpace(GameBoard &gameBoard);
-bool isEmptyCell(int x, int y);
-bool isActiveCell(int x, int y);
-bool isActiveBorderColor(GameBoard GameBoard);
-void drawInactiveCells(sf::RenderWindow &window);
-void drawActiveCells(GameBoard gameBoard, sf::RenderWindow &window);
-void drawPuzzlesToChoose(GameBoard gameBoard, vector<Puzzle> puzzles, sf::RenderWindow &window);
-
-// CONSTANTS ///////////////////////////////////////////////////////
 // board and cell size
 const int BOARD_CELLS_WIDTH_NUMBER = 10;
-const int BOARD_CELL_SIZE = 80;
+const int BOARD_CELL_SIZE = 86;
 const int BOARD_WIDTH = BOARD_CELLS_WIDTH_NUMBER * BOARD_CELL_SIZE;
 
 // board cells' colors
@@ -37,18 +26,18 @@ const int BOARD_BORDER_SIZE = 3;
 const sf::Color CAN_PLACE_PUZZLE_BORDER_COLOR(0, 0, 0);
 const sf::Color CANNOT_PLACE_PUZZLE_BORDER_COLOR(255, 0, 0);
 
-const int PADDING_BETWEEN = 20;
+const int PADDING_BETWEEN = 0;
 
 // aside - puzzle choice
 int asideSize;
 const int ASIDE_CELL_SIZE = 2 * BOARD_CELL_SIZE;
 const int ASIDE_DRAW_PUZZLE_CELL = 20;
+const int ASIDE_BORDER_SIZE = 4;
 
 // aside cells' colors
-const sf::Color ASIDE_ACTIVE_PUZZLE_CELL_COLOR(250, 20, 20);
-const sf::Color ASIDE_ON_BOARD_PUZZLE_CELL_COLOR(0, 0, 0);
-
-int counter = 0;
+const sf::Color ASIDE_EMPTY_CELL_COLOR(220, 220, 220);
+const sf::Color ASIDE_ACTIVE_PUZZLE_CELL_COLOR(255, 204, 255);
+const sf::Color ASIDE_ON_BOARD_PUZZLE_CELL_COLOR = INACTIVE_BORDER_COLOR;
 
 const sf::Color COLORS[] = {
 	sf::Color(0, 255, 0),	  // Green
@@ -65,7 +54,6 @@ const sf::Color COLORS[] = {
 	sf::Color(128, 255, 255), // Light Blue
 	sf::Color(255, 128, 128), // Light Red
 	sf::Color(128, 128, 255), // Light Purple
-	sf::Color(128, 255, 128), // Light Green
 	sf::Color(255, 128, 255), // Light Magenta
 	sf::Color(128, 255, 255), // Light Cyan
 	sf::Color(255, 255, 128), // Pale Yellow
@@ -77,15 +65,33 @@ const sf::Color COLORS[] = {
 	sf::Color(64, 128, 255)	  // Deep Sky Blue
 };
 
+int activePuzzleIndex = 0;
+int activePuzzleID;
+int (*board)[10];
+int puzzlesNumber;
+BoardGenerator boardGenerator(BOARD_CELLS_WIDTH_NUMBER, BOARD_CELLS_WIDTH_NUMBER);
+vector<Puzzle> puzzles;
+GameBoard gameBoard;
+vector<int> puzzleIDs;
+
+vector<int> getPuzzleIDs(int n, bool shufflePuzzles);
+void handleArrow(Position position);
+void handleSpace();
+bool isEmptyCell(int x, int y);
+bool isActiveCell(int x, int y);
+bool isActiveBorderColor();
+void drawInactiveCells(sf::RenderWindow &window);
+void drawActiveCells(sf::RenderWindow &window);
+void drawPuzzlesToChoose(sf::RenderWindow &window);
+
 int main()
 {
-	// TODO: check if no of puzzles is not too big
 	// SETUP -------------------------------------------------------------------------
-	BoardGenerator boardGenerator(BOARD_CELLS_WIDTH_NUMBER, BOARD_CELLS_WIDTH_NUMBER);
-	vector<Puzzle> puzzles = boardGenerator.getPuzzles();
+	boardGenerator.generateBoard();
+	puzzles = boardGenerator.getPuzzles();
 	puzzlesNumber = puzzles.size();
 
-	GameBoard gameBoard(BOARD_CELLS_WIDTH_NUMBER, BOARD_CELLS_WIDTH_NUMBER, puzzles);
+	gameBoard = GameBoard(BOARD_CELLS_WIDTH_NUMBER, BOARD_CELLS_WIDTH_NUMBER, puzzles);
 
 	asideColNumber = puzzlesNumber / asideRowNumber;
 	if (puzzlesNumber % asideRowNumber > 0)
@@ -96,6 +102,18 @@ int main()
 	asideSize = asideColNumber * ASIDE_CELL_SIZE;
 
 	cout << "puzzles: " << puzzlesNumber << endl;
+
+	puzzleIDs = getPuzzleIDs(puzzles.size(), false);
+
+	cout << "printing answer..." << endl;
+	boardGenerator.printAnswer(puzzleIDs);
+
+	cout << "puzzleID order..." << endl;
+	for (int i = 0; i < puzzles.size(); i++)
+	{
+		std::cout << puzzleIDs[i] << " ";
+	}
+	std::cout << std::endl;
 
 	// GUI -------------------------------------------------------------------------
 	sf::RenderWindow window(sf::VideoMode(BOARD_CELLS_WIDTH_NUMBER * BOARD_CELL_SIZE + asideSize + PADDING_BETWEEN, BOARD_CELLS_WIDTH_NUMBER * BOARD_CELL_SIZE), "Puzzle");
@@ -119,59 +137,61 @@ int main()
 				switch (event.key.code)
 				{
 				case sf::Keyboard::Up:
-					handleArrow(gameBoard, Position(0, -1));
+					handleArrow(Position(0, -1));
 					break;
 
 				case sf::Keyboard::Down:
-					handleArrow(gameBoard, Position(0, 1));
+					handleArrow(Position(0, 1));
 					break;
 
 				case sf::Keyboard::Left:
-					handleArrow(gameBoard, Position(-1, 0));
+					handleArrow(Position(-1, 0));
 					break;
 
 				case sf::Keyboard::Right:
-					handleArrow(gameBoard, Position(1, 0));
+					handleArrow(Position(1, 0));
 					break;
 
 				case sf::Keyboard::Space:
-					handleSpace(gameBoard);
+					handleSpace();
 					break;
 
 				case sf::Keyboard::X:
 					activePuzzleIndex = (activePuzzleIndex + 1) % puzzlesNumber;
-					activePuzzleID = puzzles[activePuzzleIndex].getID();
-					gameBoard.setActivePuzzleID(activePuzzleIndex);
+					activePuzzleID = puzzleIDs[activePuzzleIndex];
+					gameBoard.setActivePuzzleID(activePuzzleID);
 					break;
 
 				case sf::Keyboard::Z:
 					activePuzzleIndex = (activePuzzleIndex - 1 + puzzlesNumber) % puzzlesNumber;
-					activePuzzleID = puzzles[activePuzzleIndex].getID();
-					gameBoard.setActivePuzzleID(activePuzzleIndex);
+					activePuzzleID = puzzleIDs[activePuzzleIndex];
+					gameBoard.setActivePuzzleID(activePuzzleID);
+					break;
+				case sf::Keyboard::Enter:
+					execl("./puzzle-app", "puzzle-app", NULL);
 					break;
 				}
 			}
-
-			board = gameBoard.getBoard();
-
-			window.clear();
-
-			// draw inactive cells
-			drawInactiveCells(window);
-
-			// draw active cells
-			drawActiveCells(gameBoard, window);
-
-			// drawing puzzles to choose from
-			drawPuzzlesToChoose(gameBoard, puzzles, window);
-
-			window.display();
 		}
+		board = gameBoard.getBoard();
+
+		window.clear(BOARD_EMPTY_CELL_COLOR);
+
+		// draw inactive cells
+		drawInactiveCells(window);
+
+		// draw active cells
+		drawActiveCells(window);
+
+		// drawing puzzles to choose from
+		drawPuzzlesToChoose(window);
+
+		window.display();
 	}
 	return 0;
 }
 
-void handleArrow(GameBoard &gameBoard, Position position)
+void handleArrow(Position position)
 {
 	int puzzleID = gameBoard.getActivePuzzleID();
 	if (!gameBoard.isPuzzleOnBoard(puzzleID))
@@ -180,7 +200,7 @@ void handleArrow(GameBoard &gameBoard, Position position)
 	}
 }
 
-void handleSpace(GameBoard &gameBoard)
+void handleSpace()
 {
 	if (!gameBoard.isPuzzleOnBoard(activePuzzleID))
 	{
@@ -207,7 +227,7 @@ bool isActiveCell(int x, int y)
 	return board[y][x] == activePuzzleID;
 }
 
-bool isActiveBorderColor(GameBoard gameBoard)
+bool isActiveBorderColor()
 {
 	return gameBoard.canPlacePuzzle() || gameBoard.isPuzzleOnBoard(gameBoard.getActivePuzzleID());
 }
@@ -241,7 +261,7 @@ void drawInactiveCells(sf::RenderWindow &window)
 	}
 }
 
-void drawActiveCells(GameBoard gameBoard, sf::RenderWindow &window)
+void drawActiveCells(sf::RenderWindow &window)
 {
 	for (Position position : gameBoard.getActivePositions())
 	{
@@ -250,7 +270,7 @@ void drawActiveCells(GameBoard gameBoard, sf::RenderWindow &window)
 		sf::RectangleShape tile(sf::Vector2f(BOARD_CELL_SIZE - BOARD_BORDER_SIZE, BOARD_CELL_SIZE - BOARD_BORDER_SIZE));
 		tile.setPosition(x * BOARD_CELL_SIZE + BOARD_BORDER_SIZE / 2, y * BOARD_CELL_SIZE + BOARD_BORDER_SIZE / 2);
 
-		if (isActiveBorderColor(gameBoard))
+		if (isActiveBorderColor())
 		{
 			tile.setOutlineColor(CAN_PLACE_PUZZLE_BORDER_COLOR);
 		}
@@ -274,7 +294,7 @@ void drawActiveCells(GameBoard gameBoard, sf::RenderWindow &window)
 	}
 }
 
-void drawPuzzlesToChoose(GameBoard gameBoard, vector<Puzzle> puzzles, sf::RenderWindow &window)
+void drawPuzzlesToChoose(sf::RenderWindow &window)
 {
 	int puzzleIndex = 0;
 	int fullRows = puzzlesNumber % asideRowNumber;
@@ -295,15 +315,15 @@ void drawPuzzlesToChoose(GameBoard gameBoard, vector<Puzzle> puzzles, sf::Render
 				break;
 			}
 
-			sf::RectangleShape asideTile(sf::Vector2f(ASIDE_CELL_SIZE - BOARD_BORDER_SIZE, ASIDE_CELL_SIZE - BOARD_BORDER_SIZE));
-			int cellX = x * ASIDE_CELL_SIZE + BOARD_BORDER_SIZE / 2 + BOARD_WIDTH + PADDING_BETWEEN;
-			int cellY = y * ASIDE_CELL_SIZE + BOARD_BORDER_SIZE / 2;
+			sf::RectangleShape asideTile(sf::Vector2f(ASIDE_CELL_SIZE - ASIDE_BORDER_SIZE, ASIDE_CELL_SIZE - ASIDE_BORDER_SIZE));
+			int cellX = x * ASIDE_CELL_SIZE + ASIDE_BORDER_SIZE / 2 + BOARD_WIDTH + PADDING_BETWEEN;
+			int cellY = y * ASIDE_CELL_SIZE + ASIDE_BORDER_SIZE / 2;
 
 			asideTile.setPosition(cellX, cellY);
 			asideTile.setOutlineColor(INACTIVE_BORDER_COLOR);
-			asideTile.setOutlineThickness(BOARD_BORDER_SIZE);
+			asideTile.setOutlineThickness(ASIDE_BORDER_SIZE);
 
-			int currentPuzzleID = puzzles[puzzleIndex].getID();
+			int currentPuzzleID = puzzleIDs[puzzleIndex];
 			if (activePuzzleID == currentPuzzleID)
 			{
 				asideTile.setFillColor(ASIDE_ACTIVE_PUZZLE_CELL_COLOR);
@@ -314,19 +334,19 @@ void drawPuzzlesToChoose(GameBoard gameBoard, vector<Puzzle> puzzles, sf::Render
 			}
 			else
 			{
-				asideTile.setFillColor(BOARD_EMPTY_CELL_COLOR);
+				asideTile.setFillColor(ASIDE_EMPTY_CELL_COLOR);
 			}
 
 			// Get puzzle dimensions and positions
 
-			Puzzle puzzle = puzzles[puzzleIndex];
+			Puzzle puzzle = puzzles[puzzleIDs[puzzleIndex]];
 			int width = puzzle.getLowerRightCorner().getX() + 1;
 			int height = puzzle.getLowerRightCorner().getY() + 1;
 			vector<Position> positions = puzzle.getPositions();
 
 			// Calculate the position of the figure in the middle of the cell
-			int figureX = cellX + (ASIDE_CELL_SIZE - BOARD_BORDER_SIZE / 2 - width * ASIDE_DRAW_PUZZLE_CELL) / 2;
-			int figureY = cellY + (ASIDE_CELL_SIZE - BOARD_BORDER_SIZE / 2 - height * ASIDE_DRAW_PUZZLE_CELL) / 2;
+			int figureX = cellX + (ASIDE_CELL_SIZE - ASIDE_BORDER_SIZE / 2 - width * ASIDE_DRAW_PUZZLE_CELL) / 2;
+			int figureY = cellY + (ASIDE_CELL_SIZE - ASIDE_BORDER_SIZE / 2 - height * ASIDE_DRAW_PUZZLE_CELL) / 2;
 
 			window.draw(asideTile);
 			// Draw each position of the figure as a small rectangle
@@ -348,8 +368,31 @@ void drawPuzzlesToChoose(GameBoard gameBoard, vector<Puzzle> puzzles, sf::Render
 	}
 }
 
-// 1. randomize order on list
-// 3. ending game screen
+vector<int> getPuzzleIDs(int n, bool shufflePuzzles)
+{
+	vector<int> t(n);
+
+	for (int i = 0; i < n; i++)
+	{
+		t[i] = i;
+	}
+
+	if (!shufflePuzzles)
+	{
+		return t;
+	}
+
+	random_device rd;
+	mt19937 gen(rd());
+	for (int i = n - 1; i > 0; i--)
+	{
+		uniform_int_distribution<int> dist(0, i);
+		int j = dist(gen);
+		swap(t[i], t[j]);
+	}
+
+	return t;
+}
 
 // maybe to add:
 // 1. remeber active position for puzzles which are not on board?
