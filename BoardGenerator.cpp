@@ -13,6 +13,9 @@ const vector<Position> coordinatesToAdd = {
 	Position(1, 0),
 	Position(-1, 0)};
 
+const int MIN_PUZZLE_SIZE = 4;
+const int MAX_PUZZLE_SIZE = 10;
+
 BoardGenerator::BoardGenerator()
 {
 }
@@ -68,7 +71,7 @@ void BoardGenerator::generateWholePuzzles()
 	{
 		// create new puzzle
 		Puzzle puzzle = Puzzle(puzzleID);
-		int puzzleExpectedSize = getRandomFromInterval(4, 10);
+		int puzzleExpectedSize = getRandomFromInterval(MIN_PUZZLE_SIZE, MAX_PUZZLE_SIZE);
 
 		// get start position
 		Position startPosition = move(freePositions_.back());
