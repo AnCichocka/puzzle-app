@@ -8,7 +8,7 @@ GameBoard::GameBoard()
 {
 }
 
-GameBoard::GameBoard(int width, int height, const std::vector<Puzzle>& puzzles)
+GameBoard::GameBoard(int width, int height, const std::vector<Puzzle> &puzzles)
 {
 	width_ = width;
 	height_ = height;
@@ -75,21 +75,21 @@ void GameBoard::zeroBoard()
 
 void GameBoard::move(Position coordinates)
 {
-	//activePuzzle_.print();
-	Puzzle& activePuzzle = puzzles_[activePuzzleIndex_];
+	// activePuzzle_.print();
+	Puzzle &activePuzzle = puzzles_[activePuzzleIndex_];
 	Position coordinatesStart = activePuzzle.getCoordinatesStart();
 
 	Position tmpUpperLeftCorner = activePuzzle.getUpperLeftCorner() + coordinatesStart + coordinates;
 	Position tmpLowerRightCorner = activePuzzle.getLowerRightCorner() + coordinatesStart + coordinates;
 
-	//cout << "upperLeft: ";
-	//tmpUpperLeftCorner.print();
-	//cout << "lowerRight: ";
-	//tmpLowerRightCorner.print();
-	//newActivePositionStart.print();
+	// cout << "upperLeft: ";
+	// tmpUpperLeftCorner.print();
+	// cout << "lowerRight: ";
+	// tmpLowerRightCorner.print();
+	// newActivePositionStart.print();
 	if (boardUpperLeftCorner_ < tmpUpperLeftCorner && tmpLowerRightCorner < boardLowerRightCorner_)
 	{
-		//cout << "can move..." << endl;
+		// cout << "can move..." << endl;
 		activePuzzle.setCoordinatesStart(coordinatesStart + coordinates);
 	}
 
@@ -197,4 +197,29 @@ bool GameBoard::gameWon()
 		}
 	}
 	return true;
+}
+
+void GameBoard::pickUpPuzzle(int puzzleID)
+{
+	Puzzle &puzzle = puzzles_[activePuzzleIndex_];
+	vector<Position> positions = puzzle.getPositions();
+	Position start = puzzle.getCoordinatesStart();
+
+	for (Position position : positions)
+	{
+		Position tmp = position + start;
+		int x = tmp.getX();
+		int y = tmp.getY();
+		board_[y][x] = 0;
+		puzzlesOnBoard_[puzzleID] = 0;
+	}
+
+	for (int i = 0; i < 10; i++)
+	{
+		for (int j = 0; j < 10; j++)
+		{
+			cout << board_[i][j] << " ";
+		}
+		cout << endl;
+	}
 }

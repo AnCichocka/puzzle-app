@@ -20,8 +20,11 @@ Main.o:
 Main: o
 	g++ BoardGenerator.o GameBoard.o Puzzle.o Position.o Main.o -o puzzle-app -lsfml-graphics -lsfml-window -lsfml-system
 
-run: Main
+run: Main clean_build
 	./puzzle-app
+
+clean_build:
+	rm *.o
 
 clean:
 	rm *.o puzzle-app

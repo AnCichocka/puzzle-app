@@ -52,18 +52,18 @@ const sf::Color COLORS[] = {
 
 int activePuzzleIndex = 0;
 
-void handleArrow(GameBoard& gameBoard, Position position);
-void handleSpace(GameBoard& gameBoard);
+void handleArrow(GameBoard &gameBoard, Position position);
+void handleSpace(GameBoard &gameBoard);
 
 int main()
 {
-	//TODO: check if no of puzzles is not too big
+	// TODO: check if no of puzzles is not too big
 
 	BoardGenerator boardGenerator(BOARD_SIZE, BOARD_SIZE);
 	vector<Puzzle> puzzles = boardGenerator.getPuzzles(); // puzzleID = index -b 1
+	int puzzlesNumber = puzzles.size();
 
 	GameBoard gameBoard(BOARD_SIZE, BOARD_SIZE, puzzles);
-	int puzzlesNumber = puzzles.size();
 
 	// GUI ///////////////////////////////////////////////////////////////////////////////////////////////
 	sf::RenderWindow window(sf::VideoMode(BOARD_SIZE * CELL_SIZE + ASIDE_SIZE + PADDING_BETWEEN, BOARD_SIZE * CELL_SIZE), "Puzzle");
@@ -252,7 +252,7 @@ int main()
 	return 0;
 }
 
-void handleArrow(GameBoard& gameBoard, Position position)
+void handleArrow(GameBoard &gameBoard, Position position)
 {
 	int puzzleID = gameBoard.getActivePuzzleID();
 	if (gameBoard.getActivePuzzleID() != -1 && !gameBoard.isPuzzleOnBoard(puzzleID))
@@ -261,11 +261,23 @@ void handleArrow(GameBoard& gameBoard, Position position)
 	}
 };
 
-void handleSpace(GameBoard& gameBoard)
+void handleSpace(GameBoard &gameBoard)
 {
-	if (gameBoard.getActivePuzzleID() != -1 && gameBoard.canPlacePuzzle())
+	int puzzleID = gameBoard.getActivePuzzleID();
+	if (!gameBoard.isPuzzleOnBoard(puzzleID))
 	{
-		gameBoard.placeActivePuzzle();
-		// TODO: switch to next free puzzle
+		if (gameBoard.canPlacePuzzle())
+		{
+			gameBoard.placeActivePuzzle();
+			// TODO: switch to next free puzzle
+		}
+	}
+	else
+	{
+		// puzzle is on board -> pickup
+		gameBoard.pickUpPuzzle(puzzleID);
 	}
 }
+
+// TODO: randomize order on list
+// ActivePositionForNewPuzzles

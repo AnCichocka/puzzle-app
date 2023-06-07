@@ -35,9 +35,12 @@ BoardGenerator::BoardGenerator(int width, int height)
 	scaleHolesWithWholePuzzles();
 	printBoard();
 
-	cout << "scaling and reindexing puzzles positions..." << endl;
-	scaleAndReindexPuzzles();
+	cout << "reindexing puzzles..." << endl;
+	reindexPuzzles();
 	printBoard();
+
+	cout << "scaling puzzles positions..." << endl;
+	scalePuzzles();
 }
 
 void BoardGenerator::generateFreePositions()
@@ -94,7 +97,7 @@ void BoardGenerator::generateWholePuzzles()
 	}
 }
 
-void BoardGenerator::addFreeNeighbourPositions(vector<Position>& neighbours, Position position)
+void BoardGenerator::addFreeNeighbourPositions(vector<Position> &neighbours, Position position)
 {
 	vector<Position> coordinatesToAdd;
 	coordinatesToAdd.push_back(Position(0, 1));
@@ -167,7 +170,7 @@ void BoardGenerator::removeFromFreePosiitons(Position position)
 	}
 }
 
-void BoardGenerator::handlePuzzle(Puzzle& puzzle, int expectedSize)
+void BoardGenerator::handlePuzzle(Puzzle &puzzle, int expectedSize)
 {
 	vector<Position> hole = puzzle.getPositions();
 
@@ -182,7 +185,7 @@ void BoardGenerator::handlePuzzle(Puzzle& puzzle, int expectedSize)
 		}
 		puzzle.setID(-puzzle.getID());
 		holes_.push_back(puzzle);
-		//puzzle.print();
+		// puzzle.print();
 	}
 	// everything is fine - add puzlle to board
 	else
@@ -194,7 +197,7 @@ void BoardGenerator::handlePuzzle(Puzzle& puzzle, int expectedSize)
 			board_[y][x] = puzzle.getID();
 		}
 		puzzles_.push_back(puzzle);
-		//puzzle.print();
+		// puzzle.print();
 	}
 }
 
@@ -204,7 +207,7 @@ void BoardGenerator::scaleHolesWithWholePuzzles()
 	{
 		Puzzle hole = holes_[i];
 
-		//cout << "hole ID: " << hole.getID() << endl;
+		// cout << "hole ID: " << hole.getID() << endl;
 
 		vector<Position> holePositions = hole.getPositions();
 
@@ -225,22 +228,22 @@ void BoardGenerator::scaleHolesWithWholePuzzles()
 		int index = getRandomFromInterval(0, neighbourPuzzleNumbers.size() - 1);
 		int puzzleID = neighbourPuzzleNumbers[index];
 
-		//cout << "size: " << neighbourPuzzleNumbers.size() << " index: " << index << " puzzleID: " << puzzleID << endl;
-		// TODO: exception size == 0
+		// cout << "size: " << neighbourPuzzleNumbers.size() << " index: " << index << " puzzleID: " << puzzleID << endl;
+		//  TODO: exception size == 0
 		for (int j = 0; j < (int)puzzles_.size(); j++)
 		{
 			if (puzzles_[j].getID() == puzzleID)
 			{
-				//cout << "FOUND PUZZLE" << endl;
+				// cout << "FOUND PUZZLE" << endl;
 				for (int k = 0; k < (int)holePositions.size(); k++)
 				{
-					//cout << "ADDING ";
-					//holePositions[k].print();
-					//cout << endl;
+					// cout << "ADDING ";
+					// holePositions[k].print();
+					// cout << endl;
 					puzzles_[j].addPosition(holePositions[k]);
 					board_[holePositions[k].getY()][holePositions[k].getX()] = puzzleID;
 				}
-				//puzzles_[j].print();
+				// puzzles_[j].print();
 				break;
 			}
 		}
@@ -253,8 +256,7 @@ vector<int> BoardGenerator::getPuzzleNeighbourNumbers(Puzzle puzzle)
 		Position(0, 1),
 		Position(0, -1),
 		Position(1, 0),
-		Position(-1, 0)
-	};
+		Position(-1, 0)};
 
 	vector<Position> holePositions = puzzle.getPositions();
 	vector<int> neighbours;
@@ -270,24 +272,26 @@ vector<int> BoardGenerator::getPuzzleNeighbourNumbers(Puzzle puzzle)
 				int puzzleNumber = board_[positionToCheck.getY()][positionToCheck.getX()];
 
 				alreadyInNeighbours = false;
-				for(int neighbourID : neighbours){
-					if(neighbourID == puzzleNumber){
+				for (int neighbourID : neighbours)
+				{
+					if (neighbourID == puzzleNumber)
+					{
 						alreadyInNeighbours = true;
 						break;
 					}
 				}
 
-				if(!alreadyInNeighbours){
+				if (!alreadyInNeighbours)
+				{
 					neighbours.push_back(puzzleNumber);
 				}
 
-
-//TODO
-				//auto result = find(neighbours.begin(), neighbours.end(), puzzleNumber);
-				//if (result == neighbours.end())
+				// TODO
+				// auto result = find(neighbours.begin(), neighbours.end(), puzzleNumber);
+				// if (result == neighbours.end())
 				//{
 				//	neighbours.push_back(puzzleNumber);
-				//}
+				// }
 			}
 		}
 	}
@@ -318,11 +322,31 @@ vector<Puzzle> BoardGenerator::getPuzzles()
 	return puzzles_;
 }
 
-void BoardGenerator::scaleAndReindexPuzzles()
+void BoardGenerator::reindexPuzzles()
+{
+	for (int i = 0; i < (int)puzzles_.size(); i++)
+	{
+		int newID = i + 1;
+		Puzzle &puzzle = puzzles_[i];
+		int oldID = puzzle.getID();
+		if (oldID != newID)
+		{
+			vector<Position> positions = puzzle.getPositions();
+			for (Position position : positions)
+			{
+				int x = position.getX();
+				int y = position.getY();
+				board_[y][x] = newID;
+			}
+		}
+		puzzle.setID(newID);
+	}
+}
+
+void BoardGenerator::scalePuzzles()
 {
 	for (int i = 0; i < (int)puzzles_.size(); i++)
 	{
 		puzzles_[i].scalePuzzle();
-		puzzles_[i].setID(i + 1);
 	}
 }

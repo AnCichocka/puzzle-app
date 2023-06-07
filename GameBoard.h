@@ -32,6 +32,7 @@ public:
 	void setActivePuzzle(int puzzleIndex);
 	bool isPuzzleOnBoard(int puzzleID);
 	bool gameWon();
+	void pickUpPuzzle(int puzzleID);
 
 private:
 	void zeroBoard();
