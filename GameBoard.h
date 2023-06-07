@@ -11,15 +11,15 @@ private:
 	int width_;
 	int height_;
 	int board_[10][10];
-	vector<Puzzle> puzzles_;
-	int activePuzzleIndex_;
+	vector<Puzzle> puzzles_; // puzzles in aescending order form 0 puzzleID
+	int activePuzzleID_;
 	Position boardUpperLeftCorner_;
 	Position boardLowerRightCorner_;
-	int puzzlesOnBoard_[25]; // puzzleOnBoard[puzzleID] == 1 -> puzzle is on board
+	bool puzzlesOnBoard_[25]; // puzzleOnBoard_[puzzleID] = true -> puzzle on board
 
 public:
 	GameBoard();
-	GameBoard(int width, int height, const std::vector<Puzzle>& puzzles);
+	GameBoard(int width, int height, const std::vector<Puzzle> &puzzles);
 	void printBoard();
 	int (*getBoard())[10];
 	vector<Puzzle> getPuzzles();
@@ -29,15 +29,16 @@ public:
 	int getActivePuzzleID();
 	vector<Position> getActivePositions();
 	void placeActivePuzzle();
-	void setActivePuzzle(int puzzleIndex);
+	void setActivePuzzleID(int puzzleID);
 	bool isPuzzleOnBoard(int puzzleID);
 	bool gameWon();
 	void pickUpPuzzle(int puzzleID);
 
 private:
-	void zeroBoard();
+	void minusOneBoards();
 	bool canPlacePuzzle(Position startPosition);
-	bool isPositionFree(Position position);
+	bool isFree(Position position);
+	void cleanBoardPosition(int x, int y);
 };
 
 #endif

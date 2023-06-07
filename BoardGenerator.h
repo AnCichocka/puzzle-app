@@ -30,13 +30,14 @@ private:
 	void generateFreePositions();
 	void generateWholePuzzles();
 	bool isInBoardRange(Position position);
-	bool isPositionFree(Position position);
+	bool isFree(Position position);
 	void addFreeNeighbourPositions(vector<Position> &neighbours, Position position);
 	int getRandomFromInterval(int min, int max);
 	void removeFromFreePosiitons(Position position);
-	void handlePuzzle(Puzzle &puzzle, int expectedSize);
+	void addPuzzleToPuzzlesOrHoles(Puzzle &puzzle, int expectedSize);
 	void scaleHolesWithWholePuzzles();
-	vector<int> getPuzzleNeighbourNumbers(Puzzle puzzle);
+	vector<int> getNeighbourPuzzleIDs(Puzzle puzzle);
+	bool isHole(int x, int y);
 	void reindexPuzzles();
 	void scalePuzzles();
 };

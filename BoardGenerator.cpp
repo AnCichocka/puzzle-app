@@ -7,6 +7,12 @@
 
 using namespace std;
 
+const vector<Position> coordinatesToAdd = {
+	Position(0, 1),
+	Position(0, -1),
+	Position(1, 0),
+	Position(-1, 0)};
+
 BoardGenerator::BoardGenerator()
 {
 }
@@ -20,7 +26,7 @@ BoardGenerator::BoardGenerator(int width, int height)
 	{
 		for (int j = 0; j < 10; j++)
 		{
-			board_[i][j] = 0;
+			board_[i][j] = -1;
 		}
 	}
 
@@ -56,7 +62,7 @@ void BoardGenerator::generateFreePositions()
 
 void BoardGenerator::generateWholePuzzles()
 {
-	int puzzleID = 1;
+	int puzzleID = 0;
 
 	while (freePositions_.size() > 0)
 	{
@@ -92,35 +98,31 @@ void BoardGenerator::generateWholePuzzles()
 		}
 
 		// add puzzle to puzzles or holes
-		handlePuzzle(puzzle, puzzleExpectedSize);
+		addPuzzleToPuzzlesOrHoles(puzzle, puzzleExpectedSize);
 		puzzleID++;
 	}
 }
 
-void BoardGenerator::addFreeNeighbourPositions(vector<Position> &neighbours, Position position)
+void BoardGenerator::addFreeNeighbourPositions(vector<Position> &neighbourPositions, Position position)
 {
-	vector<Position> coordinatesToAdd;
-	coordinatesToAdd.push_back(Position(0, 1));
-	coordinatesToAdd.push_back(Position(0, -1));
-	coordinatesToAdd.push_back(Position(1, 0));
-	coordinatesToAdd.push_back(Position(-1, 0));
-
-	for (int i = 0; i < (int)coordinatesToAdd.size(); i++)
+	for (Position coordinates : coordinatesToAdd)
 	{
-		Position newPosition = position + coordinatesToAdd[i];
-		if (isInBoardRange(newPosition) && isPositionFree(newPosition))
+		Position newPosition = position + coordinates;
+		if (isInBoardRange(newPosition) && isFree(newPosition))
 		{
-			bool has = false;
-			for (int j = 0; j < (int)neighbours.size(); j++)
+			bool isAlreadyNeighbourPosition = false;
+			for (Position neighbourPosition : neighbourPositions)
 			{
-				if (neighbours[j] == newPosition)
+				if (neighbourPosition == newPosition)
 				{
-					has = true;
+					isAlreadyNeighbourPosition = true;
+					break;
 				}
 			}
-			if (!has)
+
+			if (!isAlreadyNeighbourPosition)
 			{
-				neighbours.push_back(newPosition);
+				neighbourPositions.push_back(newPosition);
 			}
 		}
 	}
@@ -133,11 +135,11 @@ bool BoardGenerator::isInBoardRange(Position position)
 	return 0 <= x && x < width_ && 0 <= y && y < height_;
 }
 
-bool BoardGenerator::isPositionFree(Position position)
+bool BoardGenerator::isFree(Position position)
 {
-	for (int i = 0; i < (int)freePositions_.size(); i++)
+	for (Position freePosition : freePositions_)
 	{
-		if (freePositions_[i] == position)
+		if (freePosition == position)
 		{
 			return true;
 		}
@@ -147,10 +149,12 @@ bool BoardGenerator::isPositionFree(Position position)
 
 int BoardGenerator::getRandomFromInterval(int min, int max)
 {
+	// interval (0,0)
 	if (min == max && min == 0)
 	{
 		return 0;
 	}
+
 	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 	default_random_engine generator(seed);
 	uniform_int_distribution<int> distribution(min, max);
@@ -160,143 +164,117 @@ int BoardGenerator::getRandomFromInterval(int min, int max)
 
 void BoardGenerator::removeFromFreePosiitons(Position position)
 {
-	for (int i = 0; i < (int)freePositions_.size(); i++)
+	int index = 0;
+	for (Position freePosition : freePositions_)
 	{
-		if (freePositions_[i] == position)
+		if (freePosition == position)
 		{
-			freePositions_.erase(freePositions_.begin() + i);
-			return;
+			freePositions_.erase(freePositions_.begin() + index);
+			break;
 		}
+		index++;
 	}
 }
 
-void BoardGenerator::handlePuzzle(Puzzle &puzzle, int expectedSize)
+void BoardGenerator::addPuzzleToPuzzlesOrHoles(Puzzle &puzzle, int expectedPuzzleSize)
 {
-	vector<Position> hole = puzzle.getPositions();
+	vector<Position> positions = puzzle.getPositions();
+	int puzzleID = puzzle.getID();
 
-	// something went wrong, puzzle is too small - add puzzle to holes
-	if (puzzle.getSize() != expectedSize)
+	// puzzle is too small - add puzzle to holes
+	if (puzzle.getSize() != expectedPuzzleSize)
 	{
-		for (int i = 0; i < (int)hole.size(); i++)
-		{
-			int x = hole[i].getX();
-			int y = hole[i].getY();
-			board_[y][x] = -puzzle.getID();
-		}
-		puzzle.setID(-puzzle.getID());
+		puzzleID *= -1;
+		puzzle.setID(puzzleID);
+
 		holes_.push_back(puzzle);
-		// puzzle.print();
 	}
+
 	// everything is fine - add puzlle to board
 	else
 	{
-		for (int i = 0; i < (int)hole.size(); i++)
-		{
-			int x = hole[i].getX();
-			int y = hole[i].getY();
-			board_[y][x] = puzzle.getID();
-		}
 		puzzles_.push_back(puzzle);
-		// puzzle.print();
+	}
+
+	// draw on board
+	for (Position position : positions)
+	{
+		int x = position.getX();
+		int y = position.getY();
+		board_[y][x] = puzzleID;
 	}
 }
 
 void BoardGenerator::scaleHolesWithWholePuzzles()
 {
-	for (int i = 0; i < (int)holes_.size(); i++)
+	for (Puzzle hole : holes_)
 	{
-		Puzzle hole = holes_[i];
-
-		// cout << "hole ID: " << hole.getID() << endl;
-
 		vector<Position> holePositions = hole.getPositions();
+		vector<int> neighbourPuzzleIDs = getNeighbourPuzzleIDs(hole);
 
-		// cout << "hole: ";
-		// for (int i = 0; i < (int)holePositions.size(); i++)
-		// {
-		// 	holePositions[i].print();
-		// }
+		int index = getRandomFromInterval(0, neighbourPuzzleIDs.size() - 1);
+		int puzzleID = neighbourPuzzleIDs[index];
 
-		vector<int> neighbourPuzzleNumbers = getPuzzleNeighbourNumbers(hole);
-
-		// cout << "neighbours: ";
-		// for (int i = 0; i < (int)neighbourPuzzleNumbers.size(); i++)
-		// {
-		// 	cout << neighbourPuzzleNumbers[i] << " ";
-		// }
-		// cout << endl;
-		int index = getRandomFromInterval(0, neighbourPuzzleNumbers.size() - 1);
-		int puzzleID = neighbourPuzzleNumbers[index];
-
-		// cout << "size: " << neighbourPuzzleNumbers.size() << " index: " << index << " puzzleID: " << puzzleID << endl;
-		//  TODO: exception size == 0
-		for (int j = 0; j < (int)puzzles_.size(); j++)
+		for (Puzzle puzzle : puzzles_)
 		{
-			if (puzzles_[j].getID() == puzzleID)
+			if (puzzle.getID() == puzzleID)
 			{
-				// cout << "FOUND PUZZLE" << endl;
-				for (int k = 0; k < (int)holePositions.size(); k++)
+
+				for (Position holePosition : holePositions)
 				{
-					// cout << "ADDING ";
-					// holePositions[k].print();
-					// cout << endl;
-					puzzles_[j].addPosition(holePositions[k]);
-					board_[holePositions[k].getY()][holePositions[k].getX()] = puzzleID;
+					puzzle.addPosition(holePosition);
+					int x = holePosition.getX();
+					int y = holePosition.getY();
+					board_[y][x] = puzzleID;
 				}
-				// puzzles_[j].print();
 				break;
 			}
 		}
 	}
 }
 
-vector<int> BoardGenerator::getPuzzleNeighbourNumbers(Puzzle puzzle)
+// TODO: puzzle reference
+vector<int> BoardGenerator::getNeighbourPuzzleIDs(Puzzle puzzle)
 {
-	vector<Position> coordinatesToAdd = {
-		Position(0, 1),
-		Position(0, -1),
-		Position(1, 0),
-		Position(-1, 0)};
-
 	vector<Position> holePositions = puzzle.getPositions();
-	vector<int> neighbours;
-	bool alreadyInNeighbours;
+	vector<int> neighbourIDs;
 
-	for (int i = 0; i < (int)holePositions.size(); i++)
+	for (Position holePosition : holePositions)
 	{
-		for (int j = 0; j < (int)coordinatesToAdd.size(); j++)
+		for (Position coordinates : coordinatesToAdd)
 		{
-			Position positionToCheck = holePositions[i] + coordinatesToAdd[j];
-			if (isInBoardRange(positionToCheck) && board_[positionToCheck.getY()][positionToCheck.getX()] > 0)
-			{
-				int puzzleNumber = board_[positionToCheck.getY()][positionToCheck.getX()];
+			Position positionToCheck = holePosition + coordinates;
+			int x = positionToCheck.getX();
+			int y = positionToCheck.getY();
 
-				alreadyInNeighbours = false;
-				for (int neighbourID : neighbours)
+			if (isInBoardRange(positionToCheck) && !isHole(x, y))
+			{
+				int neighbourPuzzleID = board_[y][x];
+
+				bool isAlreadyNeighbour = false;
+				for (int neighbourID : neighbourIDs)
 				{
-					if (neighbourID == puzzleNumber)
+					if (neighbourID == neighbourPuzzleID)
 					{
-						alreadyInNeighbours = true;
+						isAlreadyNeighbour = true;
 						break;
 					}
 				}
 
-				if (!alreadyInNeighbours)
+				if (!isAlreadyNeighbour)
 				{
-					neighbours.push_back(puzzleNumber);
+					neighbourIDs.push_back(neighbourPuzzleID);
 				}
-
-				// TODO
-				// auto result = find(neighbours.begin(), neighbours.end(), puzzleNumber);
-				// if (result == neighbours.end())
-				//{
-				//	neighbours.push_back(puzzleNumber);
-				// }
 			}
 		}
 	}
 
-	return neighbours;
+	return neighbourIDs;
+}
+
+bool BoardGenerator::isHole(int x, int y)
+{
+	return board_[y][x] < 0;
 }
 
 void BoardGenerator::printBoard()
@@ -324,11 +302,12 @@ vector<Puzzle> BoardGenerator::getPuzzles()
 
 void BoardGenerator::reindexPuzzles()
 {
-	for (int i = 0; i < (int)puzzles_.size(); i++)
+	int newID = 0;
+
+	for (Puzzle &puzzle : puzzles_)
 	{
-		int newID = i + 1;
-		Puzzle &puzzle = puzzles_[i];
 		int oldID = puzzle.getID();
+
 		if (oldID != newID)
 		{
 			vector<Position> positions = puzzle.getPositions();
@@ -339,7 +318,9 @@ void BoardGenerator::reindexPuzzles()
 				board_[y][x] = newID;
 			}
 		}
+
 		puzzle.setID(newID);
+		newID++;
 	}
 }
 

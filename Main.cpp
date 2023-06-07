@@ -6,10 +6,16 @@
 #include <iostream>
 
 const int asideColNumber = 3;
+// change to ID
 int activePuzzleIndex = 0;
+int activePuzzleID;
+int (*board)[10];
 
 void handleArrow(GameBoard &gameBoard, Position position);
 void handleSpace(GameBoard &gameBoard);
+bool isEmptyCell(int x, int y);
+bool isActiveCell(int x, int y);
+bool isActiveBorderColor(GameBoard GameBoard);
 
 // CONSTANTS ///////////////////////////////////////////////////////
 // board and cell size
@@ -40,7 +46,6 @@ const sf::Color ASIDE_ON_BOARD_PUZZLE_CELL_COLOR(0, 0, 0);
 int counter = 0;
 
 const sf::Color COLORS[] = {
-	sf::Color(255, 0, 0),	  // Red
 	sf::Color(0, 255, 0),	  // Green
 	sf::Color(0, 0, 255),	  // Blue
 	sf::Color(255, 255, 0),	  // Yellow
@@ -72,7 +77,7 @@ int main()
 	// TODO: check if no of puzzles is not too big
 
 	BoardGenerator boardGenerator(BOARD_CELLS_WIDTH_NUMBER, BOARD_CELLS_WIDTH_NUMBER);
-	vector<Puzzle> puzzles = boardGenerator.getPuzzles(); // puzzleID = index -b 1
+	vector<Puzzle> puzzles = boardGenerator.getPuzzles();
 	int puzzlesNumber = puzzles.size();
 
 	GameBoard gameBoard(BOARD_CELLS_WIDTH_NUMBER, BOARD_CELLS_WIDTH_NUMBER, puzzles);
@@ -120,18 +125,19 @@ int main()
 				{
 					int newActiveIndex = (activePuzzleIndex + 1) % (puzzlesNumber);
 					activePuzzleIndex = newActiveIndex;
-					gameBoard.setActivePuzzle(newActiveIndex);
+					activePuzzleID = puzzles[newActiveIndex].getID();
+					gameBoard.setActivePuzzleID(newActiveIndex);
 				}
 				else if (event.key.code == sf::Keyboard::Z)
 				{
 					int newActiveIndex = (activePuzzleIndex - 1 + puzzlesNumber) % puzzlesNumber;
 					activePuzzleIndex = newActiveIndex;
-					gameBoard.setActivePuzzle(newActiveIndex);
+					activePuzzleID = puzzles[newActiveIndex].getID();
+					gameBoard.setActivePuzzleID(newActiveIndex);
 				}
 			}
 
-			int(*board)[10] = gameBoard.getBoard();
-			int activePuzzleID = gameBoard.getActivePuzzleID();
+			board = gameBoard.getBoard();
 
 			window.clear();
 
@@ -145,17 +151,16 @@ int main()
 					tile.setOutlineColor(INACTIVE_BORDER_COLOR);
 					tile.setOutlineThickness(BOARD_BORDER_SIZE);
 
-					int puzzleID = board[y][x];
-
-					if (puzzleID != activePuzzleID)
+					if (!isActiveCell(x, y))
 					{
-						if (puzzleID > 0)
+						if (isEmptyCell(x, y))
 						{
-							tile.setFillColor(COLORS[puzzleID]);
+							tile.setFillColor(BOARD_EMPTY_CELL_COLOR);
 						}
 						else
 						{
-							tile.setFillColor(BOARD_EMPTY_CELL_COLOR);
+							int currentPuzzleID = board[y][x];
+							tile.setFillColor(COLORS[currentPuzzleID]);
 						}
 
 						window.draw(tile);
@@ -170,7 +175,8 @@ int main()
 				int y = position.getY();
 				sf::RectangleShape tile(sf::Vector2f(BOARD_CELL_SIZE - BOARD_BORDER_SIZE, BOARD_CELL_SIZE - BOARD_BORDER_SIZE));
 				tile.setPosition(x * BOARD_CELL_SIZE + BOARD_BORDER_SIZE / 2, y * BOARD_CELL_SIZE + BOARD_BORDER_SIZE / 2);
-				if (gameBoard.canPlacePuzzle() || gameBoard.isPuzzleOnBoard(gameBoard.getActivePuzzleID()))
+
+				if (isActiveBorderColor(gameBoard))
 				{
 					tile.setOutlineColor(CAN_PLACE_PUZZLE_BORDER_COLOR);
 				}
@@ -180,38 +186,37 @@ int main()
 				}
 				tile.setOutlineThickness(BOARD_BORDER_SIZE);
 
-				int puzzleID = board[y][x];
-				if (puzzleID > 0)
+				if (isEmptyCell(x, y))
 				{
-					tile.setFillColor(COLORS[puzzleID]);
+					tile.setFillColor(BOARD_EMPTY_CELL_COLOR);
 				}
 				else
 				{
-					tile.setFillColor(BOARD_EMPTY_CELL_COLOR);
+					int currentPuzzleID = board[y][x];
+					tile.setFillColor(COLORS[currentPuzzleID]);
 				}
 
 				window.draw(tile);
 			}
 
-			// drawing puzzles to choose
-
+			// drawing puzzles to choose from
 			int maxY = puzzlesNumber / asideColNumber;
 			if (puzzlesNumber % asideColNumber > 0)
 			{
 				maxY++;
 			}
 
-			int index = 0;
-
+			int puzzleIndex = 0;
 			// Draw aside grid
 			for (int y = 0; y < maxY; ++y)
 			{
 				for (int x = 0; x < asideColNumber; ++x)
 				{
-					if (index == puzzlesNumber)
+					if (puzzleIndex == puzzlesNumber)
 					{
 						break;
 					}
+
 					sf::RectangleShape asideTile(sf::Vector2f(ASIDE_CELL_SIZE - BOARD_BORDER_SIZE, ASIDE_CELL_SIZE - BOARD_BORDER_SIZE));
 					int cellX = x * ASIDE_CELL_SIZE + BOARD_BORDER_SIZE / 2 + BOARD_WIDTH + PADDING_BETWEEN;
 					int cellY = y * ASIDE_CELL_SIZE + BOARD_BORDER_SIZE / 2;
@@ -220,11 +225,12 @@ int main()
 					asideTile.setOutlineColor(INACTIVE_BORDER_COLOR);
 					asideTile.setOutlineThickness(BOARD_BORDER_SIZE);
 
-					if (activePuzzleID == index + 1)
+					int currentPuzzleID = puzzles[puzzleIndex].getID();
+					if (activePuzzleID == currentPuzzleID)
 					{
 						asideTile.setFillColor(ASIDE_ACTIVE_PUZZLE_CELL_COLOR);
 					}
-					else if (gameBoard.isPuzzleOnBoard(index + 1))
+					else if (gameBoard.isPuzzleOnBoard(currentPuzzleID))
 					{
 						asideTile.setFillColor(ASIDE_ON_BOARD_PUZZLE_CELL_COLOR);
 					}
@@ -235,7 +241,7 @@ int main()
 
 					// Get puzzle dimensions and positions
 
-					Puzzle puzzle = puzzles[index];
+					Puzzle puzzle = puzzles[puzzleIndex];
 					int width = puzzle.getLowerRightCorner().getX() + 1;
 					int height = puzzle.getLowerRightCorner().getY() + 1;
 					vector<Position> positions = puzzle.getPositions();
@@ -258,7 +264,7 @@ int main()
 						window.draw(rect);
 					}
 
-					index++;
+					puzzleIndex++;
 				}
 			}
 
@@ -271,16 +277,15 @@ int main()
 void handleArrow(GameBoard &gameBoard, Position position)
 {
 	int puzzleID = gameBoard.getActivePuzzleID();
-	if (gameBoard.getActivePuzzleID() != -1 && !gameBoard.isPuzzleOnBoard(puzzleID))
+	if (!gameBoard.isPuzzleOnBoard(puzzleID))
 	{
 		gameBoard.move(position);
 	}
-};
+}
 
 void handleSpace(GameBoard &gameBoard)
 {
-	int puzzleID = gameBoard.getActivePuzzleID();
-	if (!gameBoard.isPuzzleOnBoard(puzzleID))
+	if (!gameBoard.isPuzzleOnBoard(activePuzzleID))
 	{
 		if (gameBoard.canPlacePuzzle())
 		{
@@ -291,12 +296,26 @@ void handleSpace(GameBoard &gameBoard)
 	else
 	{
 		// puzzle is on board -> pickup
-		gameBoard.pickUpPuzzle(puzzleID);
+		gameBoard.pickUpPuzzle(activePuzzleID);
 	}
 }
 
+bool isEmptyCell(int x, int y)
+{
+	return board[y][x] == -1;
+}
+
+bool isActiveCell(int x, int y)
+{
+	return board[y][x] == activePuzzleID;
+}
+
+bool isActiveBorderColor(GameBoard gameBoard)
+{
+	return gameBoard.canPlacePuzzle() || gameBoard.isPuzzleOnBoard(gameBoard.getActivePuzzleID());
+}
+
 // 1. randomize order on list
-// 2. reslove indexes and IDs
 // 3. ending game screen
 
 // maybe to add:
