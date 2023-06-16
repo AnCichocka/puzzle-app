@@ -1,10 +1,10 @@
-# puzzle-app
+# Puzzle
 
-simple puzzle app
+## Opis:
+Aplikacja do układania losowo wygenerowanej planszy puzzli korzystająca z biblioteki SFML. Puzzle należy ułożyć w taki spodób, aby wypełnić całą planszę.
 
-key:
-arrows - move puzzle
-z - choose next puzzle
-x - choose previous puzzle
-space - place puzzle or pick it up from board
-enter - start new game
+## Sterowanie:
+- strzałki - poruszanie aktywnym puzzlem
+- z/x - zmiana aktywnego puzzla
+- spacja - upuszczenie i podniesienie puzzla z planszy
+- enter - wygenerowanie nowej planszy
